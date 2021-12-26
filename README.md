@@ -22,6 +22,7 @@ Age Secret Store is simple password manager inspired by pass which use Age <http
 ```
 
 ## Requirements
+* age
 * tree – for listing your passwords
 * KDE and Wayland (wl-clipboard and klipper) – for copying. If you want use other tools just replace commands for copying and clearing clipboard, it's only two commands in copy function
 
