@@ -21,11 +21,18 @@ Age Secret Store is simple password manager inspired by pass which use Age <http
       Show this help.
 ```
 
+## Completion
+
+To use zsh completion copy `ass.zsh-completion` to `<completion-dir>` as `_ass` and add to your `~/.zshrc` line:
+```
+fpath=(<completion-dir> $fpath)
+```
+
 ## Requirements
 * age
 * tree – for listing your passwords
 * KDE and Wayland (wl-clipboard and klipper) – for copying. If you want use other tools just replace commands for copying and clearing clipboard, it's only two commands in copy function
 
 ## Todo
-* bash/zsh completions
+* bash completions
 * YubiKey support – when [YubiKey plugin for Age](https://github.com/str4d/age-plugin-yubikey) will be ready (probably when age 1.1 will release) and when I get my own YubiKey (someone want buy me one :grin:)

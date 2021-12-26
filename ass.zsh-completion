@@ -1,0 +1,52 @@
+#compdef ass
+#autoload
+
+_ass () {
+  local cmd
+  if (( CURRENT > 2)); then
+    cmd=${words[2]}
+    # Set the context for the subcommand.
+    curcontext="${curcontext%:*:*}:ass-$cmd"
+    (( CURRENT-- ))
+    shift words
+    # Run the completion for the subcommand
+    case "${cmd}" in
+      add|insert)
+        _ass_complete_entries_subdirs
+        ;;
+      show|cp|copy|rm|remove)
+        _ass_complete_entries
+        ;;
+    esac
+  else
+    local -a subcommands
+    subcommands=(
+      "init:Initialize new storage"
+      "add:Add new entry"
+      "show:Show entry content"
+      "cp:Copy entry to clipboard"
+      "rm:Remove entry"
+      "ls:List entries"
+      "destroy:Remove storage"
+      "help:Print help"
+    )
+    _describe -t commands 'ass' subcommands
+  fi
+}
+
+_ass_complete_entries_helper () {
+  local IFS=$'\n'
+  local prefix
+  zstyle -s ":completion:${curcontext}:" prefix prefix || prefix="${ASS_DIRECTORY:-$HOME/.ass}"
+  _values -C 'passwords' ${$(find -L "$prefix" \( -name ".*" \) -o $@ -print 2>/dev/null | sed -e "s#${prefix}/\{0,1\}##" | sort):-""}
+}
+
+_ass_complete_entries_subdirs () {
+  _ass_complete_entries_helper -type d
+}
+
+_ass_complete_entries () {
+  _ass_complete_entries_helper -type f
+}
+
+_ass
