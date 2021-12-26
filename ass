@@ -1,0 +1,131 @@
+#!/bin/bash
+
+umask "077"
+set -o pipefail
+
+PREFIX="${ASS_DIRECTORY:-$HOME/.ass}"
+TIMEOUT="${ASS_COPY_TIME:-15}"
+
+keyfile="$PREFIX/.key.age"
+recipientfile="$PREFIX/.recipient.txt"
+
+PROGRAM="${0##*/}"
+
+help() {
+  cat <<EOF
+Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
+  $PROGRAM init
+      Create new storage with new age key pair.
+  $PROGRAM add <names>
+      Add new entries.
+  $PROGRAM ls
+      List entries.
+  $PROGRAM show <name>
+      Decrypt entry and print to stdout.
+  $PROGRAM cp <name>
+      Decrypt entry and copy to clipboard. Clipboard will be cleared in $TIMEOUT seconds. You can define custom time in ASS_COPY_TIME. Currently work only with klipper and wl-clipboard.
+  $PROGRAM rm <names>
+      Remove entries.
+  $PROGRAM destroy
+      Remove password storage.
+  $PROGRAM help
+      Show this help.
+EOF
+}
+
+init() {
+  if [[ ! -e "$PREFIX" ]]
+  then
+    mkdir -p "$PREFIX"
+  else
+    echo "Error: $PREFIX exist. Remove $PREFIX or choose other location in ASS_DIRECTORY."
+    exit 1
+  fi
+  age-keygen 2> "$recipientfile" | age -a -p > "$keyfile"
+  cut -f 2 -d ':' "$recipientfile" | tr -d " " | tee "$recipientfile" > /dev/null
+  exit 0
+}
+
+add() {
+  while [[ -n "$1" ]]
+  do
+    read -r -p "Enter password for $1: " -s password
+    echo
+    read -r -p "Retype password for $1: " -s password_again
+    echo
+    if [[ "$password" == "$password_again" ]]
+    then
+      mkdir -p "$PREFIX/$(dirname "$1")"
+      echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$1" || exit 1
+      echo "Password for $1 added."
+      shift
+    else
+      echo "Error: passwords do not match."
+      exit 1
+    fi
+  done
+  exit 0
+}
+
+show() {
+  age -d -i "$keyfile" "$PREFIX/$1" || exit 1
+  exit 0
+}
+
+copy() {
+  local asspass
+  asspass="$(age -d -i "$keyfile" "$PREFIX/$1")" || exit 1
+  wl-copy "$asspass"
+  while [[ "$TIMEOUT" -ge 1 ]]
+  do
+    echo -ne "$1 copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+    sleep 1
+    (( TIMEOUT-- ))
+  done
+#   not work in KDE, you must clear klipper instead
+#   wl-copy -c
+  qdbus org.kde.klipper /klipper org.kde.klipper.klipper.clearClipboardHistory &> /dev/null
+  echo -e "Clipboard cleared\033[0K\r"
+  exit 0
+}
+
+remove() {
+  while [[ -n "$1" ]]
+  do
+    local assfile="$PREFIX/$1"
+    read -r -p "Are you sure you want remove $1? [y/N] " response
+    shift
+    [[ $response == [yY] ]] || continue
+    rm -f -v "$assfile"
+    rmdir --ignore-fail-on-non-empty -p "${assfile%/*}" 2> /dev/null
+  done
+  exit 0
+}
+
+list() {
+  echo "Age Secret Store"
+  tree -N -C -l --noreport "$PREFIX" | tail -n +2
+  exit 0
+}
+
+destroy() {
+  read -r -p "Are you absolutely sure you want remove all Age Secret Store? Enter uppercase yes. " response
+  if [[ $response == "YES" ]]
+  then
+    rm -r -f -v "$PREFIX"
+  else
+    echo "Operation cancelled."
+  fi
+  exit 0
+}
+
+case "$1" in
+  init|create) shift; init ;;
+  add|insert) shift; add "$@" ;;
+  show) shift; show "$@" ;;
+  copy|cp) shift; copy "$@" ;;
+  remove|rm) shift; remove "$@" ;;
+  list|ls) shift; list ;;
+  destroy) shift; destroy ;;
+  *) help
+esac
