@@ -12,11 +12,26 @@ _ass () {
     # Run the completion for the subcommand
     case "${cmd}" in
       add|insert)
+        _arguments : \
+          "-g[generate password]" \
+          "--generate-password[generate password]" \
+          "-s[disable symbols]" \
+          "--symbol-disable[disable symbols]" \
+          "-l[password length]" \
+          "--length[password length]"
         _ass_complete_entries_subdirs
         ;;
       show|cp|copy|rm|remove)
         _ass_complete_entries
         ;;
+      passgen)
+        _arguments : \
+          "-s[disable symbols]" \
+          "--symbol-disable[disable symbols]" \
+          "-l[password length]" \
+          "--length[password length]" \
+          "-c[copy password]" \
+          "--copy[copy password]"
     esac
   else
     local -a subcommands
@@ -27,6 +42,7 @@ _ass () {
       "cp:Copy entry to clipboard"
       "rm:Remove entry"
       "ls:List entries"
+      "passgen:Generate password"
       "destroy:Remove storage"
       "help:Print help"
     )

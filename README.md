@@ -5,8 +5,8 @@ Ass Secret Store is simple cli password manager based on [Age](https://github.co
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
   ass init
       Create new storage with new age key pair.
-  ass add <names>
-      Add new entries.
+  ass add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
+      Add new entries. Optionally generate random passwords with given length and no special symbols.
   ass ls
       List entries.
   ass show <name>
@@ -15,11 +15,20 @@ Age Secret Store is simple password manager inspired by pass which use Age <http
       Decrypt entry and copy to clipboard. Clipboard will be cleared in 15 seconds. You can define custom time in ASS_COPY_TIME. Currently work only with klipper and wl-clipboard.
   ass rm <names>
       Remove entries.
+  ass passgen [--symbol-disable -s] [--length -l <number>] [--copy -c]
+      Generate random password. Optionally define password length (default 20) or disable special symbols. Copy without printing to stdout.
   ass destroy
       Remove password storage.
   ass help
       Show this help.
 ```
+
+
+## Requirements
+* age
+* tree – for listing your passwords
+* pwgen – for generating passwords
+* KDE and Wayland (wl-clipboard and klipper) – for copying. If you want use other tools just replace commands for copying and clearing clipboard, it's only two commands in copy function
 
 ## Completion
 
@@ -27,11 +36,6 @@ To use zsh completion copy `ass.zsh-completion` to `<completion-dir>` as `_ass` 
 ```
 fpath=(<completion-dir> $fpath)
 ```
-
-## Requirements
-* age
-* tree – for listing your passwords
-* KDE and Wayland (wl-clipboard and klipper) – for copying. If you want use other tools just replace commands for copying and clearing clipboard, it's only two commands in copy function
 
 ## Todo
 * bash completions

@@ -2,11 +2,13 @@
 
 umask "077"
 set -o pipefail
+set +x
+set -f
 
 PREFIX="${ASS_DIRECTORY:-$HOME/.ass}"
 TIMEOUT="${ASS_COPY_TIME:-15}"
+keyfile="${ASS_AGE_KEYFILE:-$PREFIX/.key.age}"
 
-keyfile="$PREFIX/.key.age"
 recipientfile="$PREFIX/.recipient.txt"
 
 PROGRAM="${0##*/}"
@@ -16,8 +18,8 @@ help() {
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
   $PROGRAM init
       Create new storage with new age key pair.
-  $PROGRAM add <names>
-      Add new entries.
+  $PROGRAM add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
+      Add new entries. Optionally generate random passwords with given length and no special symbols.
   $PROGRAM ls
       List entries.
   $PROGRAM show <name>
@@ -26,6 +28,8 @@ Age Secret Store is simple password manager inspired by pass which use Age <http
       Decrypt entry and copy to clipboard. Clipboard will be cleared in $TIMEOUT seconds. You can define custom time in ASS_COPY_TIME. Currently work only with klipper and wl-clipboard.
   $PROGRAM rm <names>
       Remove entries.
+  $PROGRAM passgen [--symbol-disable -s] [--length -l <number>] [--copy -c]
+      Generate random password. Optionally define password length (default 20) or disable special symbols. Copy without printing to stdout.
   $PROGRAM destroy
       Remove password storage.
   $PROGRAM help
@@ -38,7 +42,7 @@ init() {
   then
     mkdir -p "$PREFIX"
   else
-    echo "Error: $PREFIX exist. Remove $PREFIX or choose other location in ASS_DIRECTORY."
+    >&2 echo "Error: $PREFIX exist. Remove $PREFIX or choose other location in ASS_DIRECTORY."
     exit 1
   fi
   age-keygen 2> "$recipientfile" | age -a -p > "$keyfile"
@@ -47,38 +51,94 @@ init() {
 }
 
 add() {
+  local options passgen=0 pwgenopts="" length=20
+  options="$(getopt -o gsl: -l generate-password,symbol-disable,length: -n "$PROGRAM" -- "$@")"
+  eval set -- "$options"
+  while true
+  do
+    case "$1" in
+      -g|--generate-password) passgen=1; shift ;;
+      -s|--symbol-disable) pwgenopts="$1"; shift ;;
+      -l|--length) length="$1 $2"; shift 2 ;;
+      --) shift; break
+    esac
+  done
   while [[ -n "$1" ]]
   do
-    read -r -p "Enter password for $1: " -s password
-    echo
-    read -r -p "Retype password for $1: " -s password_again
-    echo
-    if [[ "$password" == "$password_again" ]]
+    if [[ -e "$PREFIX/$1" ]]
     then
-      mkdir -p "$PREFIX/$(dirname "$1")"
-      echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$1" || exit 1
-      echo "Password for $1 added."
-      shift
-    else
-      echo "Error: passwords do not match."
-      exit 1
+      read -r -p "$1 exist, do you want overwrite it? [y/N] " response
+      if [[ $response != [yY] ]]
+      then
+        shift
+        continue
+      fi
     fi
+    if [[ "$passgen" == 0 ]]
+    then
+      read -r -p "Enter password for $1: " -s password
+      echo
+      read -r -p "Retype password for $1: " -s password_again
+      echo
+      if [[ "$password" == "$password_again" ]]
+      then
+        mkdir -p "$PREFIX/$(dirname "$1")"
+        echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$1" || exit 1
+      else
+        >&2 echo "Error: passwords do not match."
+        exit 1
+      fi
+    else
+      mkdir -p "$PREFIX/$(dirname "$1")"
+      passgen $pwgenopts $length | age -e -R "$recipientfile" > "$PREFIX/$1" || exit 1
+    fi
+    echo "Password for $1 added."
+    shift
   done
   exit 0
 }
 
 show() {
-  age -d -i "$keyfile" "$PREFIX/$1" || exit 1
-  exit 0
+  if [[ -e "$PREFIX/$1" ]]
+  then
+    age -d -i "$keyfile" "$PREFIX/$1" || exit 1
+    exit 0
+  else
+    >&2 echo "Password not exist"
+    exit 1
+  fi
 }
 
 copy() {
-  local asspass
-  asspass="$(age -d -i "$keyfile" "$PREFIX/$1")" || exit 1
-  wl-copy "$asspass"
+  if [[ -e "$PREFIX/$1" ]]
+  then
+    just_copy "$(age -d -i "$keyfile" "$PREFIX/$1")" || exit 1
+  else
+    >&2 echo "Can't copy, password not exist"
+    exit 1
+  fi
+}
+
+just_copy() {
+  local options protect=0 asspass=""
+  options="$(getopt -o p -l protect -n "$PROGRAM" -- "$@")"
+  eval set -- "$options"
+  while true
+  do
+    case "$1" in
+      -p|--protect) protect=1; shift ;;
+      --) shift; break
+    esac
+  done
+  wl-copy "$1"
   while [[ "$TIMEOUT" -ge 1 ]]
   do
-    echo -ne "$1 copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+    if [[ "$protect" == 0 ]]
+    then
+      echo -ne "$1 copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+    else
+      echo -ne "Password copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+    fi
     sleep 1
     (( TIMEOUT-- ))
   done
@@ -119,6 +179,34 @@ destroy() {
   exit 0
 }
 
+# TODO clip
+passgen() {
+  local options length=20 pwgenopts="-y" clip=0
+  options="$(getopt -o csl: -l clip,syblol-disable,length: -n "$PROGRAM" -- "$@")"
+  eval set -- "$options"
+  while true
+  do
+    case "$1" in
+      -s|--symbol-disable) pwgenopts=""; shift ;;
+      -l|--length) length="$2"; shift 2 ;;
+      -c|--clip) clip=1; shift ;;
+      --) shift; break
+    esac
+  done
+  if ! [[ $length =~ ^[0-9]+$ ]]
+  then
+    >&2 echo "Password length must be a number."
+    exit 1
+  fi
+  if [[ "$clip" == 0 ]]
+  then
+    pwgen -1s $pwgenopts $length
+  else
+    just_copy -p "$(pwgen -1s $pwgenopts $length)"
+  fi
+  exit 0
+}
+
 case "$1" in
   init|create) shift; init ;;
   add|insert) shift; add "$@" ;;
@@ -127,5 +215,6 @@ case "$1" in
   remove|rm) shift; remove "$@" ;;
   list|ls) shift; list ;;
   destroy) shift; destroy ;;
-  *) help
+  passgen) shift; passgen "$@" ;;
+  *) shift; help
 esac
