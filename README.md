@@ -3,15 +3,15 @@
 Ass Secret Store is simple cli password manager based on [Age](https://github.com/FiloSottile/age). Usage:
 ```
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
-  ass init [--no-password -n]
-      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist.
+  ass init [--no-password -n] [--keyfile -k <keyfile>]
+      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist. Define custom key location (existing or not) via -k.
   ass add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
       Add new entries. Optionally generate random passwords with given length or no special symbols.
   ass ls
       List entries.
-  ass show <name>
-      Decrypt entry and print to stdout.
-  ass cp <name>
+  ass show [--keyfile -k <keyfile>] <name>
+      Decrypt entry and print to stdout. Define key file if needed.
+  ass cp [--keyfile -k <keyfile>] <name>
       Decrypt entry and copy to clipboard. Clipboard will be cleared in 15 seconds. You can define custom time in ASS_COPY_TIME. Currently work only with klipper and wl-clipboard.
   ass rm <names>
       Remove entries.
