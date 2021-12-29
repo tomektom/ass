@@ -3,10 +3,10 @@
 Ass Secret Store is simple cli password manager based on [Age](https://github.com/FiloSottile/age). Usage:
 ```
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
-  ass init
-      Create new storage with new age key pair.
+  ass init [--no-password -n]
+      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist.
   ass add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
-      Add new entries. Optionally generate random passwords with given length and no special symbols.
+      Add new entries. Optionally generate random passwords with given length or no special symbols.
   ass ls
       List entries.
   ass show <name>
@@ -21,6 +21,10 @@ Age Secret Store is simple password manager inspired by pass which use Age <http
       Remove password storage.
   ass help
       Show this help.
+Environment variables:
+  ASS_DIRECTORY – location of Age Secret Storage, default: ~/.ass
+  ASS_AGE_KEYFILE – secret age key, default: ASS_DIRECTORY/.key.age
+  ASS_COPY_TIME – copy timeout, default: 15
 ```
 
 

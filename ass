@@ -7,7 +7,7 @@ set -f
 
 PREFIX="${ASS_DIRECTORY:-$HOME/.ass}"
 TIMEOUT="${ASS_COPY_TIME:-15}"
-keyfile="${ASS_AGE_KEYFILE:-$PREFIX/.key.age}"
+KEYFILE="${ASS_AGE_KEYFILE:-$PREFIX/.key.age}"
 
 recipientfile="$PREFIX/.recipient.txt"
 
@@ -16,10 +16,10 @@ PROGRAM="${0##*/}"
 help() {
   cat <<EOF
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
-  $PROGRAM init
-      Create new storage with new age key pair.
+  $PROGRAM init [--no-password -n]
+      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist.
   $PROGRAM add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
-      Add new entries. Optionally generate random passwords with given length and no special symbols.
+      Add new entries. Optionally generate random passwords with given length or no special symbols.
   $PROGRAM ls
       List entries.
   $PROGRAM show <name>
@@ -34,10 +34,24 @@ Age Secret Store is simple password manager inspired by pass which use Age <http
       Remove password storage.
   $PROGRAM help
       Show this help.
+Environment variables:
+  ASS_DIRECTORY – location of Age Secret Storage, default: ~/.ass
+  ASS_AGE_KEYFILE – secret age key, default: ASS_DIRECTORY/.key.age
+  ASS_COPY_TIME – copy timeout, default: 15
 EOF
 }
 
 init() {
+  local options nopass=0
+  options="$(getopt -o n -l no-password -n "$PROGRAM" -- "$@")"
+  eval set -- "$options"
+  while true
+  do
+    case "$1" in
+    -n|--no-password) nopass=1; shift ;;
+    --) shift; break
+    esac
+  done
   if [[ ! -e "$PREFIX" ]]
   then
     mkdir -p "$PREFIX"
@@ -45,14 +59,32 @@ init() {
     >&2 echo "Error: $PREFIX exist. Remove $PREFIX or choose other location in ASS_DIRECTORY."
     exit 1
   fi
-  age-keygen 2> "$recipientfile" | age -a -p > "$keyfile"
-  cut -f 2 -d ':' "$recipientfile" | tr -d " " | tee "$recipientfile" > /dev/null
+  if [[ -e "$KEYFILE" ]]
+  then
+    if [[ "$nopass" == 0 ]]
+    then
+      age -d "$KEYFILE" | age-keygen -y > "$recipientfile" || exit 1
+    else
+      age-keygen -y "$KEYFILE" > "$recipientfile" || exit 1
+    fi
+  else
+    mkdir -p "$(dirname "$KEYFILE")"
+    if [[ "$nopass" == 0 ]]
+    then
+      age-keygen 2> "$recipientfile" | age -a -p > "$KEYFILE"
+      cut -f 2 -d ':' "$recipientfile" | tr -d " " | tee "$recipientfile" > /dev/null
+    else
+      age-keygen -o "$KEYFILE" 2> /dev/null
+      age-keygen -y "$KEYFILE" > "$recipientfile"
+    fi
+  fi
+  echo "Ass Secret Store initialized succesfully"
   exit 0
 }
 
 add() {
-  local options passgen=0 pwgenopts="" length=20
-  options="$(getopt -o gsl: -l generate-password,symbol-disable,length: -n "$PROGRAM" -- "$@")"
+  local options passgen=0 pwgenopts="" length=20 recipients=""
+  options="$(getopt -o gsl:r: -l generate-password,symbol-disable,length:,recipient: -n "$PROGRAM" -- "$@")"
   eval set -- "$options"
   while true
   do
@@ -60,6 +92,7 @@ add() {
       -g|--generate-password) passgen=1; shift ;;
       -s|--symbol-disable) pwgenopts="$1"; shift ;;
       -l|--length) length="$1 $2"; shift 2 ;;
+      -r|--recipient) recipients+="-r $2 "; shift 2;;
       --) shift; break
     esac
   done
@@ -83,14 +116,14 @@ add() {
       if [[ "$password" == "$password_again" ]]
       then
         mkdir -p "$PREFIX/$(dirname "$1")"
-        echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$1" || exit 1
+        echo "$password" | age -e -R "$recipientfile" $recipients > "$PREFIX/$1" || exit 1
       else
         >&2 echo "Error: passwords do not match."
         exit 1
       fi
     else
       mkdir -p "$PREFIX/$(dirname "$1")"
-      passgen $pwgenopts $length | age -e -R "$recipientfile" > "$PREFIX/$1" || exit 1
+      passgen $pwgenopts $length | age -e -R "$recipientfile" $recipients > "$PREFIX/$1" || exit 1
     fi
     echo "Password for $1 added."
     shift
@@ -101,7 +134,7 @@ add() {
 show() {
   if [[ -e "$PREFIX/$1" ]]
   then
-    age -d -i "$keyfile" "$PREFIX/$1" || exit 1
+    age -d -i "$KEYFILE" "$PREFIX/$1" || exit 1
     exit 0
   else
     >&2 echo "Password not exist"
@@ -112,7 +145,7 @@ show() {
 copy() {
   if [[ -e "$PREFIX/$1" ]]
   then
-    just_copy "$(age -d -i "$keyfile" "$PREFIX/$1")" || exit 1
+    just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$1")" || exit 1
   else
     >&2 echo "Can't copy, password not exist"
     exit 1
@@ -179,7 +212,6 @@ destroy() {
   exit 0
 }
 
-# TODO clip
 passgen() {
   local options length=20 pwgenopts="-y" clip=0
   options="$(getopt -o csl: -l clip,syblol-disable,length: -n "$PROGRAM" -- "$@")"
@@ -208,7 +240,7 @@ passgen() {
 }
 
 case "$1" in
-  init|create) shift; init ;;
+  init|create) shift; init "$@" ;;
   add|insert) shift; add "$@" ;;
   show) shift; show "$@" ;;
   copy|cp) shift; copy "$@" ;;

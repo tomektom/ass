@@ -11,6 +11,11 @@ _ass () {
     shift words
     # Run the completion for the subcommand
     case "${cmd}" in
+      init)
+        _arguments : \
+          "-n[paswordless key]" \
+          "--no-password[paswordless key]"
+        ;;
       add|insert)
         _arguments : \
           "-g[generate password]" \
@@ -18,7 +23,9 @@ _ass () {
           "-s[disable symbols]" \
           "--symbol-disable[disable symbols]" \
           "-l[password length]" \
-          "--length[password length]"
+          "--length[password length]" \
+          "-r[recipient]" \
+          "--recipient[recipient]"
         _ass_complete_entries_subdirs
         ;;
       show|cp|copy|rm|remove)
