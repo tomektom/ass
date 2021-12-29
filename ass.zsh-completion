@@ -13,8 +13,10 @@ _ass () {
     case "${cmd}" in
       init)
         _arguments : \
-          "-n[paswordless key]" \
-          "--no-password[paswordless key]"
+          "-n[key without password]" \
+          "--no-password[key without password]" \
+          "-k[key file]" \
+          "--keyfile[key file]"
         ;;
       add|insert)
         _arguments : \
@@ -28,7 +30,13 @@ _ass () {
           "--recipient[recipient]"
         _ass_complete_entries_subdirs
         ;;
-      show|cp|copy|rm|remove)
+      show|cp|copy)
+        _arguments : \
+          "-k[key file]" \
+          "--keyfile[key file]"
+        _ass_complete_entries
+        ;;
+      rm|remove)
         _ass_complete_entries
         ;;
       passgen)

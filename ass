@@ -16,15 +16,15 @@ PROGRAM="${0##*/}"
 help() {
   cat <<EOF
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
-  $PROGRAM init [--no-password -n]
-      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist.
+  $PROGRAM init [--no-password -n] [--keyfile -k <keyfile>]
+      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist. Define custom key location (existing or not) via -k.
   $PROGRAM add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
       Add new entries. Optionally generate random passwords with given length or no special symbols.
   $PROGRAM ls
       List entries.
-  $PROGRAM show <name>
-      Decrypt entry and print to stdout.
-  $PROGRAM cp <name>
+  $PROGRAM show [--keyfile -k <keyfile>] <name>
+      Decrypt entry and print to stdout. Define key file if needed.
+  $PROGRAM cp [--keyfile -k <keyfile>] <name>
       Decrypt entry and copy to clipboard. Clipboard will be cleared in $TIMEOUT seconds. You can define custom time in ASS_COPY_TIME. Currently work only with klipper and wl-clipboard.
   $PROGRAM rm <names>
       Remove entries.
@@ -43,15 +43,17 @@ EOF
 
 init() {
   local options nopass=0
-  options="$(getopt -o n -l no-password -n "$PROGRAM" -- "$@")"
+  options="$(getopt -o n,k: -l no-password,keyfile: -n "$PROGRAM" -- "$@")"
   eval set -- "$options"
   while true
   do
     case "$1" in
     -n|--no-password) nopass=1; shift ;;
+    -k|--keyfile) KEYFILE="$2"; shift 2 ;;
     --) shift; break
     esac
   done
+  echo $KEYFILE
   if [[ ! -e "$PREFIX" ]]
   then
     mkdir -p "$PREFIX"
@@ -132,6 +134,21 @@ add() {
 }
 
 show() {
+  local options nopass=0
+  options="$(getopt -o n,k: -l no-password,keyfile: -n "$PROGRAM" -- "$@")"
+  eval set -- "$options"
+  while true
+  do
+    case "$1" in
+    -k|--keyfile) KEYFILE="$2"; shift 2 ;;
+    --) shift; break
+    esac
+  done
+  if [[ ! -e "$KEYFILE" ]]
+  then
+    >&2 echo "ERROR: Keyfile not exist."
+    exit 1
+  fi
   if [[ -e "$PREFIX/$1" ]]
   then
     age -d -i "$KEYFILE" "$PREFIX/$1" || exit 1
@@ -143,6 +160,21 @@ show() {
 }
 
 copy() {
+  local options nopass=0
+  options="$(getopt -o n,k: -l no-password,keyfile: -n "$PROGRAM" -- "$@")"
+  eval set -- "$options"
+  while true
+  do
+    case "$1" in
+    -k|--keyfile) KEYFILE="$2"; shift 2 ;;
+    --) shift; break
+    esac
+  done
+  if [[ ! -e "$KEYFILE" ]]
+  then
+    >&2 echo "ERROR: Keyfile not exist."
+    exit 1
+  fi
   if [[ -e "$PREFIX/$1" ]]
   then
     just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$1")" || exit 1
