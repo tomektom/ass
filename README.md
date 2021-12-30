@@ -5,8 +5,8 @@ Ass Secret Store is simple cli password manager based on [Age](https://github.co
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
   ass init [--no-password -n] [--keyfile -k <keyfile>]
       Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist. Define custom key location (existing or not) via -k.
-  ass add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] <names>
-      Add new entries. Optionally generate random passwords with given length or no special symbols.
+  ass add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] [--recipient -r <recipient>] <names>
+      Add new entries. Optionally generate random passwords with given length or no special symbols. You can define additional recipients.
   ass ls
       List entries.
   ass show [--keyfile -k <keyfile>] <name>
@@ -29,10 +29,10 @@ Environment variables:
 
 
 ## Requirements
-* age
-* tree – for listing your passwords
-* pwgen – for generating passwords
-* KDE and Wayland (wl-clipboard and klipper) – for copying. If you want use other tools just replace commands for copying and clearing clipboard, it's only two commands in copy function
+* `age`
+* `tree` – for listing your passwords
+* `pwgen` – for generating passwords
+* `wl-clipboard` for copying on Wayland, `xsel` and `xclip` for copying on X11
 
 ## Completion
 
