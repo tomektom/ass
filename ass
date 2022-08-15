@@ -164,7 +164,7 @@ copy() {
   [[ -e "$PREFIX" ]] || killme "ERROR: Age Secret Storage not exist."
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
   [[ -e "$PREFIX/$1" ]] || killme "ERROR: Can't copy, entry not exist"
-  just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$1")" || exit 1
+  just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$1")" "$1" || exit 1
 }
 
 just_copy() {
@@ -200,7 +200,7 @@ just_copy() {
   do
     if [[ "$protect" == 0 ]]
     then
-      echo -ne "$1 copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+      echo -ne "$2 copied, clipboard will reset in $TIMEOUT second\033[0K\r"
     else
       echo -ne "Password copied, clipboard will reset in $TIMEOUT second\033[0K\r"
     fi
