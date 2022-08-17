@@ -29,10 +29,12 @@ Environment variables:
 
 
 ## Requirements
+
 * `age`
 * `tree` – for listing your passwords
 * `pwgen` – for generating passwords
 * `wl-clipboard` for copying on Wayland, `xsel` and `xclip` for copying on X11
+* [gum](https://github.com/charmbracelet/gum) – if you want use `asss.sh`, pretty and interactive version of `ass` :grin:
 
 ## Completion
 
