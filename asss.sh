@@ -137,7 +137,7 @@ show() {
     gum style --foreground f00 --bold "Age Secret Store is empty!"
   else
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
-    gum style --foreground=333 "$(age -d -i "$KEYFILE" "$PREFIX/$choice")" || exit 1
+    echo "The password of $(gum style --foreground=212 "$choice"): $(gum style --foreground=333 "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
   fi
   gum input
 }
