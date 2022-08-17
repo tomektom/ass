@@ -71,7 +71,7 @@ add() {
     if [[ "$password" == "$password_again" ]]
     then
       mkdir -p "$PREFIX/$(dirname "$entry")"
-      echo "$password" | age -e -R "$recipientfile" $recipients > "$PREFIX/$entry" || exit 1
+      echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$entry" || exit 1
     else
       gum style --foreground f00 --bold "Passwords do not match. Entry not added."
       gum input
@@ -79,7 +79,7 @@ add() {
     fi
   else
     mkdir -p "$PREFIX/$(dirname "$entry")"
-    passgen | age -e -R "$recipientfile" $recipients > "$PREFIX/$entry" || exit 1
+    passgen | age -e -R "$recipientfile" > "$PREFIX/$entry" || exit 1
   fi
   echo "Password for $(gum style --foreground 333 "$entry") added."
   gum input
@@ -198,6 +198,21 @@ killme() {
   exit 1
 }
 
+editor() {
+  local choice secret
+  [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
+  if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
+  then
+    gum style --foreground f00 --bold "Age Secret Store is empty!"
+  else
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
+    secret="$(gum write --value "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
+    echo "$secret" | age -e -R "$recipientfile" > "$PREFIX/$choice" || exit 1
+    echo "$(gum style --foreground 333 "$choice") changed."
+  fi
+  gum input
+}
+
 ############# Main program #####################
 
 [[ -e "$PREFIX" ]] || init
@@ -205,7 +220,7 @@ while true
 do
   clear
   gum style --foreground 333 --border-foreground 212 --border double --align center --width 50 --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
-  case $(gum choose "Add password" "Show password" "Copy password" "Remove password" "List entries" "Destroy Age Secret Store" "Generate password" "Exit")
+  case $(gum choose "Add password" "Show password" "Copy password" "Edit password" "Remove password" "List entries" "Destroy Age Secret Store" "Generate password" "Exit")
   in
     "Add password") add ;;
     "Show password") show ;;
@@ -217,6 +232,7 @@ do
       ;;
     "Generate password") just_copy -p passgen 
       gum input ;;
+    "Edit password") editor ;;
     *) clear; exit 0
   esac
 done
