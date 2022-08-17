@@ -13,47 +13,16 @@ recipientfile="$PREFIX/.recipient.txt"
 
 PROGRAM="${0##*/}"
 
-help() {
-  cat <<EOF
-Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
-  $PROGRAM init [--no-password -n] [--keyfile -k <keyfile>]
-      Create new Age Secret Storage. If you not use password protected keys you should use -n flag. Keys are automatically generated if not exist. Define custom key location (existing or not) via -k.
-  $PROGRAM add [--generate-password -g] [--symbol-disable -s] [--length -l <number>] [--recipient -r <recipient>] <names>
-      Add new entries. Optionally generate random passwords with given length or no special symbols. You can define additional recipients.
-  $PROGRAM ls
-      List entries.
-  $PROGRAM show [--keyfile -k <keyfile>] <name>
-      Decrypt entry and print to stdout. Define key file if needed.
-  $PROGRAM cp [--keyfile -k <keyfile>] <name>
-      Decrypt entry and copy to clipboard. Clipboard will be cleared in $TIMEOUT seconds. You can define custom time in ASS_COPY_TIME. Currently work only with klipper and wl-clipboard.
-  $PROGRAM rm <names>
-      Remove entries.
-  $PROGRAM passgen [--symbol-disable -s] [--length -l <number>] [--copy -c]
-      Generate random password. Optionally define password length (default 20) or disable special symbols. Copy without printing to stdout.
-  $PROGRAM destroy
-      Remove password storage.
-  $PROGRAM help
-      Show this help.
-Environment variables:
-  ASS_DIRECTORY – location of Age Secret Storage, default: ~/.ass
-  ASS_AGE_KEYFILE – secret age key, default: ASS_DIRECTORY/.key.age
-  ASS_COPY_TIME – copy timeout, default: 15
-EOF
-}
-
-# todo utwardzić – sprawdzanie czy katalog i klucz istnieje przed dodaniem, czytaniem itp.
 init() {
-  local options nopass=0
-  options="$(getopt -o n,k: -l no-password,keyfile: -n "$PROGRAM" -- "$@")"
-  eval set -- "$options"
-  while true
-  do
-    case "$1" in
-    -n|--no-password) nopass=1; shift ;;
-    -k|--keyfile) KEYFILE="$2"; shift 2 ;;
-    --) shift; break
-    esac
-  done
+  local nopass
+  clear
+  gum style --foreground 333 --border-foreground 212 --border double --align center --width 50 --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
+  if ! gum confirm "You don't have Age Secret Store. Create new?"
+  then
+    killme "ERROR: You must create Age Secret Store to use this program."
+  fi
+  gum confirm "Create password protected keyfile?"
+  nopass="$?"
   if [[ ! -e "$PREFIX" ]]
   then
     mkdir -p "$PREFIX"
@@ -79,96 +48,71 @@ init() {
       age-keygen -y "$KEYFILE" > "$recipientfile"
     fi
   fi
-  echo "Ass Secret Store initialized succesfully"
-  exit 0
+  gum style --foreground 333 "Age Secret Store initialized succesfully"
+  gum input
 }
 
 add() {
-  local options passgen=0 pwgenopts="" length=20 recipients=""
-  options="$(getopt -o gsl:r: -l generate-password,symbol-disable,length:,recipient: -n "$PROGRAM" -- "$@")"
-  eval set -- "$options"
-  while true
-  do
-    case "$1" in
-      -g|--generate-password) passgen=1; shift ;;
-      -s|--symbol-disable) pwgenopts="$1"; shift ;;
-      -l|--length) length="$1 $2"; shift 2 ;;
-      -r|--recipient) recipients+="-r $2 "; shift 2;;
-      --) shift; break
-    esac
-  done
-  [[ -e "$PREFIX" ]] || killme "ERROR: Age Secret Storage not exist."
-  while [[ -n "$1" ]]
-  do
-    if [[ -e "$PREFIX/$1" ]]
+  local passgen
+  entry=$(gum input --placeholder "Enter entry name")
+  if [[ -e "$PREFIX/$entry" ]]
+  then
+    if ! gum confirm "$(gum style --foreground=333 "$entry") exist, do you want overwrite it?"
     then
-      read -r -p "$1 exist, do you want overwrite it? [y/N] " response
-      if [[ $response != [yY] ]]
-      then
-        shift
-        continue
-      fi
+      return
     fi
-    if [[ "$passgen" == 0 ]]
+  fi
+  gum confirm "Do you want autogenerate password?"
+  passgen="$?"
+  if [[ "$passgen" == 1 ]]
+  then
+    password=$(gum input --placeholder "Enter password for $entry" --password)
+    password_again=$(gum input --placeholder "Retype password for $entry" --password)
+    if [[ "$password" == "$password_again" ]]
     then
-      read -r -p "Enter password for $1: " -s password
-      echo
-      read -r -p "Retype password for $1: " -s password_again
-      echo
-      if [[ "$password" == "$password_again" ]]
-      then
-        mkdir -p "$PREFIX/$(dirname "$1")"
-        echo "$password" | age -e -R "$recipientfile" $recipients > "$PREFIX/$1" || exit 1
-      else
-        killme "Error: Passwords do not match."
-      fi
+      mkdir -p "$PREFIX/$(dirname "$entry")"
+      echo "$password" | age -e -R "$recipientfile" $recipients > "$PREFIX/$entry" || exit 1
     else
-      mkdir -p "$PREFIX/$(dirname "$1")"
-      passgen $pwgenopts $length | age -e -R "$recipientfile" $recipients > "$PREFIX/$1" || exit 1
+      gum style --foreground f00 --bold "Passwords do not match. Entry not added."
+      gum input
+      return
     fi
-    echo "Password for $1 added."
-    shift
-  done
-  exit 0
+  else
+    mkdir -p "$PREFIX/$(dirname "$entry")"
+    passgen | age -e -R "$recipientfile" $recipients > "$PREFIX/$entry" || exit 1
+  fi
+  echo "Password for $(gum style --foreground 333 "$entry") added."
+  gum input
 }
 
 show() {
-  local options nopass=0
-  options="$(getopt -o n,k: -l no-password,keyfile: -n "$PROGRAM" -- "$@")"
-  eval set -- "$options"
-  while true
-  do
-    case "$1" in
-    -k|--keyfile) KEYFILE="$2"; shift 2 ;;
-    --) shift; break
-    esac
-  done
-  [[ -e "$PREFIX" ]] || killme "ERROR: Age Secret Storage not exist."
+  local choice
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
-  [[ -e "$PREFIX/$1" ]] || killme "ERROR: Entry not exist"
-  age -d -i "$KEYFILE" "$PREFIX/$1" || exit 1
-  exit 0
+  if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
+  then
+    gum style --foreground f00 --bold "Age Secret Store is empty!"
+  else
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
+    echo "The password of $(gum style --foreground=212 "$choice"): $(gum style --foreground=333 "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
+  fi
+  gum input
 }
 
 copy() {
-  local options nopass=0
-  options="$(getopt -o n,k: -l no-password,keyfile: -n "$PROGRAM" -- "$@")"
-  eval set -- "$options"
-  while true
-  do
-    case "$1" in
-    -k|--keyfile) KEYFILE="$2"; shift 2 ;;
-    --) shift; break
-    esac
-  done
-  [[ -e "$PREFIX" ]] || killme "ERROR: Age Secret Storage not exist."
+  local choice
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
-  [[ -e "$PREFIX/$1" ]] || killme "ERROR: Can't copy, entry not exist"
-  just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$1")" "$1" || exit 1
+  if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
+  then
+    gum style --foreground f00 --bold "Age Secret Store is empty!"
+    gum input
+  else
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
+    just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$choice")" "$choice" || exit 1
+  fi
 }
 
 just_copy() {
-  local options copycommand clearcommand protect=0 asspass=""
+  local options copycommand clearcommand protect=0 tmout="$TIMEOUT"
   options="$(getopt -o p -l protect -n "$PROGRAM" -- "$@")"
   eval set -- "$options"
   while true
@@ -196,88 +140,83 @@ just_copy() {
   command -v $clearcommand &> /dev/null || killme "ERROR: Clipboard unupported"
   # copying & timeout
   eval $copycommand "$1"
-  while [[ "$TIMEOUT" -ge 1 ]]
+  while [[ "$tmout" -ge 1 ]]
   do
     if [[ "$protect" == 0 ]]
     then
-      echo -ne "$2 copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+      echo -ne "$(gum style --foreground 212 "$2") copied, clipboard will reset in $(gum style --foreground 333 "$tmout") second\033[0K\r"
     else
-      echo -ne "Password copied, clipboard will reset in $TIMEOUT second\033[0K\r"
+      echo -ne "Password copied, clipboard will reset in $(gum style --foreground 333 "$tmout") second\033[0K\r"
     fi
     sleep 1
-    (( TIMEOUT-- ))
+    (( tmout-- ))
   done
   eval $clearcommand
-  echo -e "Clipboard cleared\033[0K\r"
-  exit 0
+  echo -e "$(gum style --foreground f00 --bold "Clipboard cleared")\033[0K\r"
 }
 
 remove() {
-  while [[ -n "$1" ]]
-  do
-    local assfile="$PREFIX/$1"
-    read -r -p "Are you sure you want remove $1? [y/N] " response
-    shift
-    [[ $response == [yY] ]] || continue
-    rm -f -v "$assfile"
-    rmdir --ignore-fail-on-non-empty -p "${assfile%/*}" 2> /dev/null
-  done
-  exit 0
+  if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
+  then
+    gum style --foreground f00 --bold "Age Secret Store is empty! Cannot remove anything!"
+    gum input
+  else
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
+    if gum confirm "Are you sure you want remove $choice"
+    then
+      assfile="$PREFIX/$choice"
+      rm -f "$assfile"
+      rmdir --ignore-fail-on-non-empty -p "${assfile%/*}" 2> /dev/null
+      gum style --foreground f00 --bold "Entry removed!"
+      gum input
+    fi
+  fi
 }
 
 list() {
-  echo "Age Secret Store"
+  gum style --bold "Age Secret Store"
   tree -N -C -l --noreport "$PREFIX" | tail -n +2
-  exit 0
-}
-
-destroy() {
-  read -r -p "Are you absolutely sure you want remove all Age Secret Store? Enter uppercase yes. " response
-  if [[ $response == "YES" ]]
-  then
-    rm -r -f -v "$PREFIX"
-  else
-    echo "Operation cancelled."
-  fi
-  exit 0
+  gum input
 }
 
 passgen() {
-  local options length=20 pwgenopts="-y" clip=0
-  options="$(getopt -o csl: -l clip,syblol-disable,length: -n "$PROGRAM" -- "$@")"
-  eval set -- "$options"
-  while true
+  local length=20 pwgenopts="-y"
+  gum confirm "Include special characters to password?" || pwgenopts=""
+
+  length=$(gum input --prompt "$(gum style --bold "Password lenghth: ")" --value "$length")
+  while ! [[ $length =~ ^[0-9]+$ ]]
   do
-    case "$1" in
-      -s|--symbol-disable) pwgenopts=""; shift ;;
-      -l|--length) length="$2"; shift 2 ;;
-      -c|--clip) clip=1; shift ;;
-      --) shift; break
-    esac
+    length=$(gum input --prompt "$(gum style --bold "Password lenghth: ")" --placeholder "Password length must be a number")
   done
   [[ $length =~ ^[0-9]+$ ]] || killme "Password length must be a number."
-  if [[ "$clip" == 0 ]]
-  then
-    pwgen -1s $pwgenopts $length
-  else
-    just_copy -p "$(pwgen -1s $pwgenopts $length)"
-  fi
-  exit 0
+
+  pwgen -1s $pwgenopts $length
 }
 
 killme() {
-  >&2 echo "$1"
+  >&2 gum style --foreground f00 --bold "$1"
   exit 1
 }
 
-case "$1" in
-  init|create) shift; init "$@" ;;
-  add|insert) shift; add "$@" ;;
-  show) shift; show "$@" ;;
-  copy|cp) shift; copy "$@" ;;
-  remove|rm) shift; remove "$@" ;;
-  list|ls) shift; list ;;
-  destroy) shift; destroy ;;
-  passgen) shift; passgen "$@" ;;
-  *) shift; help
-esac
+############# Main program #####################
+
+[[ -e "$PREFIX" ]] || init
+while true
+do
+  clear
+  gum style --foreground 333 --border-foreground 212 --border double --align center --width 50 --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
+  case $(gum choose "Add password" "Show password" "Copy password" "Remove password" "List entries" "Destroy Age Secret Store" "Generate password" "Exit")
+  in
+    "Add password") add ;;
+    "Show password") show ;;
+    "Copy password") copy ;;
+    "Remove password") remove ;;
+    "List entries") list ;;
+    "Destroy Age Secret Store")
+      gum confirm "Are you absolutely sure you want remove all Age Secret Store?" && rm -r -f -v "$PREFIX" && exit 0 || gum style --bold "Operation cancelled." && gum input 
+      ;;
+    "Generate password") just_copy -p passgen 
+      gum input ;;
+    *) clear; exit 0
+  esac
+done

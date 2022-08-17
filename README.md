@@ -1,6 +1,19 @@
 ## About
 
-Ass Secret Store is simple cli password manager based on [Age](https://github.com/FiloSottile/age). Usage:
+Ass Secret Store is simple cli password manager based on [Age](https://github.com/FiloSottile/age). Usage: run [ass](./ass) in terminal and do things :stuck_out_tongue:
+
+## Requirements
+
+* `age`
+* [gum](https://github.com/charmbracelet/gum)
+* `tree` – for listing your passwords
+* `pwgen` – for generating passwords
+* `wl-clipboard` for copying on Wayland, `xsel` and `xclip` for copying on X11
+
+
+## Old version
+
+You can use old version without `gum` dependency, it's [ass-old](./ass-old)file. Usage:
 ```
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
   ass init [--no-password -n] [--keyfile -k <keyfile>]
@@ -26,23 +39,9 @@ Environment variables:
   ASS_AGE_KEYFILE – secret age key, default: ASS_DIRECTORY/.key.age
   ASS_COPY_TIME – copy timeout, default: 15
 ```
-
-
-## Requirements
-
-* `age`
-* `tree` – for listing your passwords
-* `pwgen` – for generating passwords
-* `wl-clipboard` for copying on Wayland, `xsel` and `xclip` for copying on X11
-* [gum](https://github.com/charmbracelet/gum) – if you want use `asss.sh`, pretty and interactive version of `ass` :grin:
-
-## Completion
+## Zsh completion (old version only)
 
 To use zsh completion copy `ass.zsh-completion` to `<completion-dir>` as `_ass` and add to your `~/.zshrc` line:
 ```
 fpath=(<completion-dir> $fpath)
 ```
-
-## Todo
-* bash completions
-* YubiKey support – when [YubiKey plugin for Age](https://github.com/str4d/age-plugin-yubikey) will be ready (probably when age 1.1 will release) and when I get my own YubiKey (someone want buy me one :grin:)
