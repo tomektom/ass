@@ -28,7 +28,7 @@ S_WIDTH="60"
 
 ## Old version
 
-You can use old version without `gum` dependency, it's [ass-old](./ass-old)file. Usage:
+You can use old version without `gum` dependency, it's [ass-old](./ass-old) file. Usage:
 ```
 Age Secret Store is simple password manager inspired by pass which use Age <https://github.com/FiloSottile/age> as encryption. Usage:
   ass init [--no-password -n] [--keyfile -k <keyfile>]

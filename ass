@@ -35,7 +35,7 @@ init() {
   then
     killme "ERROR: You must create Age Secret Store to use this program."
   fi
-  gum confirm --selected.background "$C_BUTTON" "Create password protected keyfile?"
+  gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Create password protected keyfile?"
   nopass="$?"
   if [[ ! -e "$PREFIX" ]]
   then
@@ -119,7 +119,6 @@ copy() {
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
     gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "Age Secret Store is empty!"
-    gum input
   else
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
     just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$choice")" "$choice" || exit 1
