@@ -5,6 +5,20 @@ set -o pipefail
 set +x
 set -f
 
+# default color definitions
+C_WARN="434"
+C_ERR="521"
+C_OK="595"
+C_PASS="321"
+C_ENAME="134"
+C_TITLE="937"
+C_BORDER="212"
+C_BUTTON="333"
+C_TREE="678"
+S_WIDTH="60"
+# import custom colors
+[[ -f "$HOME/.config/ass/colors" ]] && source "$HOME/.config/ass/colors"
+
 PREFIX="${ASS_DIRECTORY:-$HOME/.ass}"
 TIMEOUT="${ASS_COPY_TIME:-15}"
 KEYFILE="${ASS_AGE_KEYFILE:-$PREFIX/.key.age}"
@@ -16,12 +30,12 @@ PROGRAM="${0##*/}"
 init() {
   local nopass
   clear
-  gum style --foreground 333 --border-foreground 212 --border double --align center --width 50 --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
-  if ! gum confirm "You don't have Age Secret Store. Create new?"
+  gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
+  if ! gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "You don't have Age Secret Store. Create new?"
   then
     killme "ERROR: You must create Age Secret Store to use this program."
   fi
-  gum confirm "Create password protected keyfile?"
+  gum confirm --selected.background "$C_BUTTON" "Create password protected keyfile?"
   nopass="$?"
   if [[ ! -e "$PREFIX" ]]
   then
@@ -48,7 +62,7 @@ init() {
       age-keygen -y "$KEYFILE" > "$recipientfile"
     fi
   fi
-  gum style --foreground 333 "Age Secret Store initialized succesfully"
+  gum style --margin "0 0 0 2" --foreground "$C_OK" "Age Secret Store initialized succesfully"
   gum input
 }
 
@@ -57,23 +71,23 @@ add() {
   entry=$(gum input --placeholder "Enter entry name")
   if [[ -e "$PREFIX/$entry" ]]
   then
-    if ! gum confirm "$(gum style --foreground=333 "$entry") exist, do you want overwrite it?"
+    if ! gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "$(gum style --foreground "$C_ENAME" "$entry") exist, do you want overwrite it?"
     then
       return
     fi
   fi
-  gum confirm "Do you want autogenerate password?"
+  gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Do you want autogenerate password?"
   passgen="$?"
   if [[ "$passgen" == 1 ]]
   then
-    password=$(gum input --placeholder "Enter password for $entry" --password)
-    password_again=$(gum input --placeholder "Retype password for $entry" --password)
+    password=$(gum input --placeholder "Enter password for $(gum style --foreground "$C_ENAME" "$entry")" --password)
+    password_again=$(gum input --placeholder "Retype password for $(gum style --foreground "$C_ENAME" "$entry")" --password)
     if [[ "$password" == "$password_again" ]]
     then
       mkdir -p "$PREFIX/$(dirname "$entry")"
       echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$entry" || exit 1
     else
-      gum style --foreground f00 --bold "Passwords do not match. Entry not added."
+      gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "Passwords do not match. Entry not added."
       gum input
       return
     fi
@@ -81,7 +95,7 @@ add() {
     mkdir -p "$PREFIX/$(dirname "$entry")"
     passgen | age -e -R "$recipientfile" > "$PREFIX/$entry" || exit 1
   fi
-  echo "Password for $(gum style --foreground 333 "$entry") added."
+  gum style --margin "0 0 0 2" --foreground "$C_OK" "Password for $(gum style --foreground "$C_ENAME" "$entry") $(gum style --foreground "$C_OK" "added.")"
   gum input
 }
 
@@ -90,10 +104,11 @@ show() {
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
-    gum style --foreground f00 --bold "Age Secret Store is empty!"
+    gum style --foreground "$C_WARN" --bold "Age Secret Store is empty!"
   else
-    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
-    echo "The password of $(gum style --foreground=212 "$choice"): $(gum style --foreground=333 "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
+    gum style --margin "0 2" --bold "The content of $(gum style --foreground "$C_ENAME" "$choice"):"
+    gum style --foreground "$C_PASS" --align left --width "$S_WIDTH" --margin "1 2" --padding "0 2" "$(age -d -i "$KEYFILE" "$PREFIX/$choice")"
   fi
   gum input
 }
@@ -103,10 +118,10 @@ copy() {
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
-    gum style --foreground f00 --bold "Age Secret Store is empty!"
+    gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "Age Secret Store is empty!"
     gum input
   else
-    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
     just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$choice")" "$choice" || exit 1
   fi
 }
@@ -122,7 +137,6 @@ just_copy() {
       --) shift; break
     esac
   done
-  # set clipboard commands
   if [[ "$XDG_SESSION_DESKTOP" == KDE ]]
   then
     copycommand="qdbus org.kde.klipper /klipper org.kde.klipper.klipper.setClipboardContents"
@@ -139,62 +153,60 @@ just_copy() {
   command -v $copycommand &> /dev/null || killme "ERROR: Clipboard unupported"
   command -v $clearcommand &> /dev/null || killme "ERROR: Clipboard unupported"
   # copying & timeout
+  # echo "$1"
   eval $copycommand "$1"
   while [[ "$tmout" -ge 1 ]]
   do
     if [[ "$protect" == 0 ]]
     then
-      echo -ne "$(gum style --foreground 212 "$2") copied, clipboard will reset in $(gum style --foreground 333 "$tmout") second\033[0K\r"
+      echo -ne "$(gum style --margin "0 0 0 2" "$(gum style --foreground "$C_ENAME" "$2") copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
     else
-      echo -ne "Password copied, clipboard will reset in $(gum style --foreground 333 "$tmout") second\033[0K\r"
+      echo -ne "$(gum style --margin "0 0 0 2" "Password copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
     fi
     sleep 1
     (( tmout-- ))
   done
   eval $clearcommand
-  echo -e "$(gum style --foreground f00 --bold "Clipboard cleared")\033[0K\r"
+  echo -e "$(gum style --margin "0 0 0 2" --foreground "$C_OK" --bold "Clipboard cleared")\033[0K\r"
 }
 
 remove() {
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
-    gum style --foreground f00 --bold "Age Secret Store is empty! Cannot remove anything!"
+    gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "Age Secret Store is empty! Cannot remove anything!"
     gum input
   else
-    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
-    if gum confirm "Are you sure you want remove $choice"
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
+    if gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Are you sure you want remove $(gum style --foreground "$C_ENAME" "$choice")"
     then
       assfile="$PREFIX/$choice"
       rm -f "$assfile"
       rmdir --ignore-fail-on-non-empty -p "${assfile%/*}" 2> /dev/null
-      gum style --foreground f00 --bold "Entry removed!"
+      gum style --margin "0 0 0 2" --foreground "$C_OK" --bold "Entry removed!"
       gum input
     fi
   fi
 }
 
 list() {
-  gum style --bold "Age Secret Store"
-  tree -N -C -l --noreport "$PREFIX" | tail -n +2
+  gum style --margin "0 0 0 2" --foreground "$C_TITLE" --bold "Age Secret Store"
+  gum style --margin "0 0 0 2" --foreground "$C_TREE" "$(tree -N -n -l --noreport "$PREFIX" | tail -n +2)"
   gum input
 }
 
 passgen() {
   local length=20 pwgenopts="-y"
-  gum confirm "Include special characters to password?" || pwgenopts=""
-
-  length=$(gum input --prompt "$(gum style --bold "Password lenghth: ")" --value "$length")
+  gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Include special characters to password?" || pwgenopts=""
+  length=$(gum input --prompt "$(gum style --margin "0 0 0 2" --bold "Password lenghth: ")" --value "$length")
   while ! [[ $length =~ ^[0-9]+$ ]]
   do
-    length=$(gum input --prompt "$(gum style --bold "Password lenghth: ")" --placeholder "Password length must be a number")
+    length=$(gum input --prompt "$(gum style --margin "0 0 0 2" --bold "Password lenghth: ")" --placeholder "Password length must be a number")
   done
-  [[ $length =~ ^[0-9]+$ ]] || killme "Password length must be a number."
-
-  pwgen -1s $pwgenopts $length
+  pwgen -1s "$pwgenopts" "$length"
 }
 
 killme() {
-  >&2 gum style --foreground f00 --bold "$1"
+  >&2 gum style --margin "0 0 0 2" --foreground "$C_ERR" --bold "$1"
   exit 1
 }
 
@@ -203,14 +215,19 @@ editor() {
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
-    gum style --foreground f00 --bold "Age Secret Store is empty!"
+    gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "Age Secret Store is empty!"
   else
-    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter)
-    secret="$(gum write --value "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
+    choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
+    secret="$(gum write --width "$S_WIDTH" --value "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
     echo "$secret" | age -e -R "$recipientfile" > "$PREFIX/$choice" || exit 1
-    echo "$(gum style --foreground 333 "$choice") changed."
+    gum style --margin "0 0 0 2" --foreground "$C_OK" "$(gum style --foreground "$C_ENAME" "$choice") changed."
   fi
   gum input
+}
+
+iwantpass () {
+  local secret
+  passgen
 }
 
 ############# Main program #####################
@@ -219,8 +236,8 @@ editor() {
 while true
 do
   clear
-  gum style --foreground 333 --border-foreground 212 --border double --align center --width 50 --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
-  case $(gum choose "Add password" "Show password" "Copy password" "Edit password" "Remove password" "List entries" "Destroy Age Secret Store" "Generate password" "Exit")
+  gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
+  case $(gum choose --cursor.foreground "$C_OK" "Add password" "Show password" "Copy password" "Edit password" "Remove password" "List entries" "Destroy Age Secret Store" "Generate password" "Exit")
   in
     "Add password") add ;;
     "Show password") show ;;
@@ -228,9 +245,9 @@ do
     "Remove password") remove ;;
     "List entries") list ;;
     "Destroy Age Secret Store")
-      gum confirm "Are you absolutely sure you want remove all Age Secret Store?" && rm -r -f -v "$PREFIX" && exit 0 || gum style --bold "Operation cancelled." && gum input 
+      gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" --prompt.foreground "$C_ERR" "Are you absolutely sure you want remove all Age Secret Store?" && rm -r -f -v "$PREFIX" && exit 0 || gum style --margin "0 0 0 2" --bold --foreground "$C_OK" "Operation cancelled." && gum input 
       ;;
-    "Generate password") just_copy -p passgen 
+    "Generate password") just_copy -p "$(passgen)"
       gum input ;;
     "Edit password") editor ;;
     *) clear; exit 0

@@ -10,6 +10,21 @@ Ass Secret Store is simple cli password manager based on [Age](https://github.co
 * `pwgen` – for generating passwords
 * `wl-clipboard` for copying on Wayland, `xsel` and `xclip` for copying on X11
 
+## Custom colors
+
+You can create own color style and define custom width in `$HOME/.config/ass/colors`. Available variables and default values:
+```bash
+C_WARN="434"
+C_ERR="521"
+C_OK="595"
+C_PASS="321"
+C_ENAME="134"
+C_TITLE="937"
+C_BORDER="212"
+C_BUTTON="333"
+C_TREE="678"
+S_WIDTH="60"
+```
 
 ## Old version
 
