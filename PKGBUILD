@@ -1,14 +1,13 @@
 # Maintainer: tomektom
 pkgname=ass
-pkgver=0.0.1
+pkgver=0.1
 pkgrel=1
 pkgdesc="Simple password manager based on Age"
 arch=('any')
 url="https://github.com/tomektom/ass.git"
 license=('GPL3')
-depends=('gum' 'age' 'tree')
-optdepends=('pwgen: generating passwords'
-            'wl-clipboard: copying on Wayland'
+depends=('gum' 'age' 'tree' 'pwgen')
+optdepends=('wl-clipboard: copying on Wayland'
             'xsel: copying on Xorg'
             'xclip: copying on Xorg')
 source=("git+https://github.com/tomektom/ass.git#tag=v$pkgver")

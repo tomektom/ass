@@ -124,10 +124,11 @@ copy() {
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
     just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$choice")" "$choice" || exit 1
   fi
+  gum input
 }
 
 just_copy() {
-  local options copycommand clearcommand protect=0 tmout="$TIMEOUT"
+  local options protect=0 tmout="$TIMEOUT"
   options="$(getopt -o p -l protect -n "$PROGRAM" -- "$@")"
   eval set -- "$options"
   while true
@@ -139,34 +140,53 @@ just_copy() {
   done
   if [[ "$XDG_SESSION_DESKTOP" == KDE ]]
   then
-    copycommand="qdbus org.kde.klipper /klipper org.kde.klipper.klipper.setClipboardContents"
-    clearcommand="qdbus org.kde.klipper /klipper org.kde.klipper.klipper.clearClipboardHistory"
+    qdbus org.kde.klipper /klipper org.kde.klipper.klipper.setClipboardContents "$1"
+    while [[ "$tmout" -ge 1 ]]
+    do
+      if [[ "$protect" == 0 ]]
+      then
+        echo -ne "$(gum style --margin "0 0 0 2" "$(gum style --foreground "$C_ENAME" "$2") copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
+      else
+        echo -ne "$(gum style --margin "0 0 0 2" "Password copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
+      fi
+      sleep 1
+      (( tmout-- ))
+    done
+    qdbus org.kde.klipper /klipper org.kde.klipper.klipper.clearClipboardHistory
   elif [[ "$XDG_SESSION_TYPE" == wayland ]]
   then
-    copycommand="wl-copy"
-    clearcommand="wl-copy -c"
+    command -v wl-copy &> /dev/null || gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "ERROR: Clipboard unupported" && return
+    wl-copy "$1"
+    while [[ "$tmout" -ge 1 ]]
+    do
+      if [[ "$protect" == 0 ]]
+      then
+        echo -ne "$(gum style --margin "0 0 0 2" "$(gum style --foreground "$C_ENAME" "$2") copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
+      else
+        echo -ne "$(gum style --margin "0 0 0 2" "Password copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
+      fi
+      sleep 1
+      (( tmout-- ))
+    done
+    wl-copy -c
   elif [[ "$XDG_SESSION_TYPE" == x11 ]]
   then
-    copycommand="xclip -selection clipboard"
-    clearcommand="xsel -cb"
+    command -v xclip &> /dev/null || gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "ERROR: Clipboard unupported" && return
+    command -v xsel &> /dev/null || gum style --margin "0 0 0 2" --foreground "$C_WARN" --bold "ERROR: Clipboard unupported" && return
+    xclip -selection clipboard "$1"
+    while [[ "$tmout" -ge 1 ]]
+    do
+      if [[ "$protect" == 0 ]]
+      then
+        echo -ne "$(gum style --margin "0 0 0 2" "$(gum style --foreground "$C_ENAME" "$2") copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
+      else
+        echo -ne "$(gum style --margin "0 0 0 2" "Password copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
+      fi
+      sleep 1
+      (( tmout-- ))
+    done
+    xsel -cb
   fi
-  command -v $copycommand &> /dev/null || killme "ERROR: Clipboard unupported"
-  command -v $clearcommand &> /dev/null || killme "ERROR: Clipboard unupported"
-  # copying & timeout
-  # echo "$1"
-  eval $copycommand "$1"
-  while [[ "$tmout" -ge 1 ]]
-  do
-    if [[ "$protect" == 0 ]]
-    then
-      echo -ne "$(gum style --margin "0 0 0 2" "$(gum style --foreground "$C_ENAME" "$2") copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
-    else
-      echo -ne "$(gum style --margin "0 0 0 2" "Password copied, clipboard will reset in $(gum style --foreground "$C_OK" "$tmout") second")\033[0K\r"
-    fi
-    sleep 1
-    (( tmout-- ))
-  done
-  eval $clearcommand
   echo -e "$(gum style --margin "0 0 0 2" --foreground "$C_OK" --bold "Clipboard cleared")\033[0K\r"
 }
 
