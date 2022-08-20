@@ -33,12 +33,6 @@ init() {
   gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" 'Age Secret Store' 'No more pain in ass!'
   gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Create password protected keyfile?"
   nopass="$?"
-  if [[ ! -e "$PREFIX" ]]
-  then
-    mkdir -p "$PREFIX"
-  else
-    killme "ERROR: $PREFIX exist. Remove $PREFIX or choose other location in ASS_DIRECTORY."
-  fi
   if [[ -e "$KEYFILE" ]]
   then
     if [[ "$nopass" == 0 ]]
@@ -60,7 +54,6 @@ init() {
     fi
   fi
   FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" "Age Secret Store initialized succesfully")"
-  # gum input
 }
 
 add() {
@@ -92,7 +85,6 @@ add() {
       echo "$password" | age -e -R "$recipientfile" > "$PREFIX/$entry" || exit 1
     else
       FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_WARN" --bold "Passwords do not match. Entry not added.")"
-      # gum input
       return
     fi
   else
@@ -100,7 +92,6 @@ add() {
     passgen | age -e -R "$recipientfile" > "$PREFIX/$entry" || exit 1
   fi
   FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" "Password for $(gum style --foreground "$C_ENAME" "$entry") $(gum style --foreground "$C_OK" "added.")")"
-  # gum input
 }
 
 show() {
@@ -131,7 +122,6 @@ copy() {
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
     just_copy "$(age -d -i "$KEYFILE" "$PREFIX/$choice")" "$choice" || exit 1
   fi
-  # gum input
 }
 
 just_copy() {
@@ -203,7 +193,6 @@ remove() {
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
     FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_WARN" --bold "Age Secret Store is empty! Cannot remove anything!")"
-    # gum input
   else
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
     if gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Are you sure you want remove $(gum style --foreground "$C_ENAME" "$choice")"
@@ -212,9 +201,8 @@ remove() {
       rm -f "$assfile"
       rmdir --ignore-fail-on-non-empty -p "${assfile%/*}" 2> /dev/null
       FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" --bold "Entry removed!")"
-      # gum input
     else
-     FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" --bold "Entry not removed")"
+      FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" --bold "Entry not removed")"
     fi
   fi
 }
@@ -259,12 +247,10 @@ editor() {
     echo "$secret" | age -e -R "$recipientfile" > "$PREFIX/$choice" || exit 1
     FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" "$(gum style --foreground "$C_ENAME" "$choice") changed.")"
   fi
-  # gum input
 }
 
 ############# Main program #####################
 
-# FEEDBACK=""
 [[ -e "$PREFIX" ]] || init
 while true
 do
