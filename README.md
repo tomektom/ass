@@ -12,17 +12,18 @@ Ass Secret Store is simple cli password manager based on [Age](https://github.co
 
 ## Custom colors
 
-You can create own color style and define custom width in `$HOME/.config/ass/colors`. Available variables and default values:
+You can create own color style and define custom width in `$HOME/.config/ass/colors`. You can use terminal colors (as below) or hex codes. Available variables and default values:
 ```bash
-C_WARN="434"
-C_ERR="521"
-C_OK="595"
-C_PASS="321"
-C_ENAME="134"
-C_TITLE="937"
-C_BORDER="212"
-C_BUTTON="333"
-C_TREE="678"
+C_WARN="3"
+C_ERR="1"
+C_OK="2"
+C_PASS="6"
+C_ENAME="10"
+C_TITLE="13"
+C_BORDER="5"
+C_BUTTON="2"
+C_TREE="10"
+C_CURSOR="15"
 S_WIDTH="60"
 ```
 

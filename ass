@@ -6,15 +6,16 @@ set +x
 set -f
 
 # default color definitions
-C_WARN="434"
-C_ERR="521"
-C_OK="595"
-C_PASS="321"
-C_ENAME="134"
-C_TITLE="937"
-C_BORDER="212"
-C_BUTTON="333"
-C_TREE="678"
+C_WARN="3"
+C_ERR="1"
+C_OK="2"
+C_PASS="6"
+C_ENAME="10"
+C_TITLE="13"
+C_BORDER="5"
+C_BUTTON="2"
+C_TREE="10"
+C_CURSOR="15"
 S_WIDTH="60"
 # import custom colors
 [[ -f "$HOME/.config/ass/colors" ]] && source "$HOME/.config/ass/colors"
@@ -47,7 +48,7 @@ init() {
     then
       age-keygen 2> "$recipientfile" | age -a -p > "$KEYFILE"
       cut -f 2 -d ':' "$recipientfile" | tr -d " " | tee "$recipientfile" > /dev/null
-      gum input --placeholder "Press enter when you remember password"
+      gum input --cursor.foreground "$C_CURSOR" --placeholder "Press enter when you remember password"
     else
       age-keygen -o "$KEYFILE" 2> /dev/null
       age-keygen -y "$KEYFILE" > "$recipientfile"
@@ -60,7 +61,7 @@ add() {
   local passgen
   clear
   gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
-  entry=$(gum input --placeholder "Enter entry name")
+  entry=$(gum input --cursor.foreground "$C_CURSOR" --placeholder "Enter entry name")
   if [[ -z "$entry" ]]
   then
     FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_WARN" --bold "Entry name cannot be empty.")"
@@ -77,8 +78,8 @@ add() {
   passgen="$?"
   if [[ "$passgen" == 1 ]]
   then
-    password=$(gum input --placeholder "Enter password for $(gum style --foreground "$C_ENAME" "$entry")" --password)
-    password_again=$(gum input --placeholder "Retype password for $(gum style --foreground "$C_ENAME" "$entry")" --password)
+    password=$(gum input --cursor.foreground "$C_CURSOR" --placeholder "Enter password for $(gum style --foreground "$C_ENAME" "$entry")" --password)
+    password_again=$(gum input --cursor.foreground "$C_CURSOR" --placeholder "Retype password for $(gum style --foreground "$C_ENAME" "$entry")" --password)
     if [[ "$password" == "$password_again" ]]
     then
       mkdir -p "$PREFIX/$(dirname "$entry")"
@@ -106,14 +107,12 @@ show() {
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
     gum style --margin "0 2" --bold "The content of $(gum style --foreground "$C_ENAME" "$choice"):"
     gum style --foreground "$C_PASS" --align left --width "$S_WIDTH" --margin "1 2" --padding "0 2" "$(age -d -i "$KEYFILE" "$PREFIX/$choice")"
-    gum input --placeholder "Press enter when you read password"
+    gum input --cursor.foreground "$C_CURSOR" --placeholder "Press enter when you read password"
   fi
 }
 
 copy() {
   local choice
-  clear
-  gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
   [[ -e "$KEYFILE" ]] || killme "ERROR: Keyfile not exist."
   if [[ -z "$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null)" ]]
   then
@@ -212,18 +211,16 @@ list() {
   gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
   gum style --margin "0 0 0 2" --foreground "$C_TITLE" --bold "Age Secret Store"
   gum style --margin "0 0 0 2" --foreground "$C_TREE" "$(tree -N -n -l --noreport "$PREFIX" | tail -n +2)"
-  gum input --placeholder "Press enter..."
+  gum input --cursor.foreground "$C_CURSOR" --placeholder "Press enter..."
 }
 
 passgen() {
   local length=20 pwgenopts="-y"
-  clear
-  gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
   gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" "Include special characters to password?" || pwgenopts=""
-  length=$(gum input --prompt "$(gum style --margin "0 0 0 2" --bold "Password lenghth: ")" --value "$length")
+  length=$(gum input --cursor.foreground "$C_CURSOR" --prompt "$(gum style --margin "0 0 0 2" --bold "Password lenghth: ")" --value "$length")
   while ! [[ $length =~ ^[0-9]+$ ]]
   do
-    length=$(gum input --prompt "$(gum style --margin "0 0 0 2" --bold "Password lenghth: ")" --placeholder "Password length must be a number")
+    length=$(gum input --cursor.foreground "$C_CURSOR" --prompt "$(gum style --margin "0 0 0 2" --bold "Password lenghth: ")" --placeholder "Password length must be a number")
   done
   pwgen -1s "$pwgenopts" "$length"
 }
@@ -243,10 +240,15 @@ editor() {
     FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_WARN" --bold "Age Secret Store is empty!")"
   else
     choice=$(find -L "$PREFIX" \( -name ".*" \) -o -type f -print 2>/dev/null | sed -e "s#${PREFIX}/\{0,1\}##" | sort | gum filter --indicator.foreground "$C_OK" --prompt.foreground "$C_OK" --match.foreground "$C_OK")
-    secret="$(gum write --width "$S_WIDTH" --value "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
+    secret="$(gum write --cursor.foreground "$C_CURSOR" --width "$S_WIDTH" --value "$(age -d -i "$KEYFILE" "$PREFIX/$choice")")"
     echo "$secret" | age -e -R "$recipientfile" > "$PREFIX/$choice" || exit 1
-    FEEDBACK="$(gum style --margin "0 0 1 2" --foreground "$C_OK" "$(gum style --foreground "$C_ENAME" "$choice") changed.")"
+    FEEDBACK="$(gum style --margin "0 0 1 2" "$(gum style --bold --foreground "$C_ENAME" "$choice") $(gum style --bold --foreground "$C_OK" "changed.")")"
   fi
+}
+
+show_title() {
+  clear
+  gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
 }
 
 ############# Main program #####################
@@ -254,8 +256,7 @@ editor() {
 [[ -e "$PREFIX" ]] || init
 while true
 do
-  clear
-  gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
+  show_title
   if [[ -n "$FEEDBACK" ]]
   then
     echo "$FEEDBACK"
@@ -265,17 +266,17 @@ do
   in
     "Add password") add ;;
     "Show password") show ;;
-    "Copy password") copy ;;
+    "Copy password")
+      show_title
+      copy ;;
     "Remove password") remove ;;
     "List entries") list ;;
     "Destroy Age Secret Store")
-      clear
-      gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
-      gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" --prompt.foreground "$C_ERR" "Are you absolutely sure you want remove all Age Secret Store?" && rm -r -f -v "$PREFIX" && exit 0 || gum style --margin "0 0 0 2" --bold --foreground "$C_OK" "Operation cancelled." && gum input 
+      show_title
+      gum confirm --prompt.margin "0 2" --selected.background "$C_BUTTON" --prompt.foreground "$C_ERR" "Are you absolutely sure you want remove all Age Secret Store?" && rm -r -f -v "$PREFIX" && exit 0 || FEEDBACK="$(gum style --margin "0 0 1 2" --bold --foreground "$C_OK" "Operation cancelled.")"
       ;;
     "Generate password")
-      clear
-      gum style --foreground "$C_TITLE" --border-foreground "$C_BORDER" --border double --align center --width "$S_WIDTH" --margin "1 2" --padding "2 4" "$(gum style --bold "Age Secret Store")" 'No more pain in ass!'
+      show_title
       just_copy -p "$(passgen)"
       ;;
     "Edit password") editor ;;
