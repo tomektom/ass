@@ -1,6 +1,6 @@
 # Maintainer: tomektom
 pkgname=ass
-pkgver=0.1.1
+pkgver=0.2
 pkgrel=1
 pkgdesc="Simple password manager based on Age"
 arch=('any')

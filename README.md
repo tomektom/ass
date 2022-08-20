@@ -27,6 +27,10 @@ C_CURSOR="15"
 S_WIDTH="60"
 ```
 
+## Note about clipboard
+
+Copying should work without problems on KDE. There is also implemented support for `xclip`, `xsel` and `wl-clipboard` but your DE may not handle this.
+
 ## Old version
 
 You can use old version without `gum` dependency, it's [ass-old](./ass-old) file. Usage:
