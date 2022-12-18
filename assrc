@@ -1,0 +1,24 @@
+# shellcheck disable=SC2034,SC2148
+C_WARN="3"
+C_ERR="1"
+C_OK="2"
+C_PASS="6"
+C_ENAME="10"
+C_TITLE="13"
+C_BORDER="5"
+C_BUTTON="2"
+C_TREE="10"
+C_CURSOR="15"
+S_WIDTH="60"
+
+ASS_COPY_TIME=15
+ASS_DIRECTORY="$HOME/.ass"
+ASS_KEYFILE="$ASS_DIRECTORY/.key.age"
+ASS_RECIPIENT="$ASS_DIRECTORY/.recipient.txt"
+
+ASS_SUBTITLES=(
+  "No more pain in ass!"
+  "Eat well, shit well!"
+  "Trust me, I'm an engineer."
+  "Intented for farting."
+)
